@@ -1,4 +1,5 @@
 import pygame
+import time
 
 # Properties
 WIDTH, HEIGHT = 900, 900
@@ -46,14 +47,16 @@ def event_handle(game_state, buttons):
             game_state = "quit"
         
         if event.type == pygame.MOUSEBUTTONDOWN:
-            for button in buttons.items():
-                if(buttons[button[0]].collidepoint(event.pos)):
-                    game_state = button[0].lower()
-            clicked = get_clicked_cell(event.pos, 225, 150, 50)
+            clicked = False
+            if game_state == "sudoku":
+                clicked = get_clicked_cell(event.pos, 225, 150, 50)
             if clicked:
                 row, col = clicked
                 if sudoku_grid[row][col] == 0:
                     selected_cell = (row, col)
+            for button in buttons.items():
+                if(buttons[button[0]].collidepoint(event.pos)):
+                    game_state = button[0].lower()
 
         if event.type == pygame.KEYDOWN and selected_cell:
             if pygame.K_1 <= event.key <= pygame.K_9:
@@ -68,17 +71,16 @@ def event_handle(game_state, buttons):
     return game_state
 
 def draw_sudoku_grid(screen):
-    for i in range(10):  # Fix: Loop from 0 to 9 to cover all 10 lines
+    for i in range(10):
         length_box = 50
-        length_line = length_box * 9  # 9x9 grid (no extra padding)
+        length_line = length_box * 9
         width = 2
         padding_x = 225
         padding_y = 150
 
         if i % 3 == 0:
-            width = 4  # Bold lines every 3rd row/column
+            width = 4
 
-        # Vertical lines
         pygame.draw.line(
             screen, BLACK,
             (padding_x + length_box * i, padding_y),
@@ -86,7 +88,6 @@ def draw_sudoku_grid(screen):
             width
         )
 
-        # Horizontal lines
         pygame.draw.line(
             screen, BLACK,
             (padding_x, padding_y + length_box * i),
@@ -95,15 +96,15 @@ def draw_sudoku_grid(screen):
         )
 
 def draw_numbers(screen, font, sudoku_grid):
-    length_box = 50  # Size of each cell
+    length_box = 50
     padding_x = 225
     padding_y = 150
 
     for row in range(9):
         for col in range(9):
             num = sudoku_grid[row][col]
-            if num != 0:  # Only draw if it's not an empty cell
-                text_surface = font.render(str(num), True, BLACK)  # Convert number to string
+            if num != 0:
+                text_surface = font.render(str(num), True, BLACK)
                 text_rect = text_surface.get_rect(center=(
                     padding_x + col * length_box + length_box // 2,  
                     padding_y + row * length_box + length_box // 2  
@@ -115,20 +116,26 @@ def get_clicked_cell(mouse_pos, padding_x, padding_y, length_box):
     col = (x - padding_x) // length_box
     row = (y - padding_y) // length_box
 
-    if 0 <= row < 9 and 0 <= col < 9:  # Ensure the click is inside the grid
+    if 0 <= row < 9 and 0 <= col < 9:
         return row, col
     return None
 
+def highlight_selected_cell(screen, selected_cell, padding_x, padding_y, length_box):
+    if selected_cell:
+        row, col = selected_cell
+        pygame.draw.rect(
+            screen, RED,
+            (padding_x + col * length_box, padding_y + row * length_box, length_box, length_box),
+            3
+        )
+
 
 def main():
-    # Initialize pygame
     pygame.init()
 
-    # Screen settings
     game_state = "menu"
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
-    # Button properties
     button_width, button_height = 200, 60
     menu_buttons = {
         "Sudoku": pygame.Rect((WIDTH/2)-(button_width/2), 150, button_width, button_height),
@@ -140,7 +147,6 @@ def main():
         "Menu": pygame.Rect(600, (HEIGHT-(button_height*2)), button_width, button_height)
     }
 
-    # Font
     font = pygame.font.Font(None, 40)
 
     running = True
@@ -150,7 +156,6 @@ def main():
 
             screen.fill(WHITE)
 
-            # Get mouse position
             mouse_pos = pygame.mouse.get_pos()
 
             draw_buttons(screen, font, menu_buttons, mouse_pos)
@@ -171,6 +176,7 @@ def main():
             draw_sudoku_grid(screen)
             draw_numbers(screen, font, sudoku_grid)
             draw_buttons(screen, font, sudoku_buttons, mouse_pos)
+            highlight_selected_cell(screen, selected_cell, 225, 150, 50)
             
             game_state = event_handle(game_state, sudoku_buttons)
 
