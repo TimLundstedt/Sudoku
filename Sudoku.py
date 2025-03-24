@@ -26,6 +26,8 @@ sudoku_grid = [
 ]
 
 selected_cell = None
+message = None
+message_time = 0
 
 def draw_buttons(screen, font, buttons, mouse_pos):
     for text, rect in buttons.items():
@@ -41,6 +43,7 @@ def draw_buttons(screen, font, buttons, mouse_pos):
 def event_handle(game_state, buttons):
     global selected_cell
     global sudoku_grid
+    global message, message_time
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -57,18 +60,56 @@ def event_handle(game_state, buttons):
             for button in buttons.items():
                 if(buttons[button[0]].collidepoint(event.pos)):
                     game_state = button[0].lower()
+                    selected_cell = None
 
         if event.type == pygame.KEYDOWN and selected_cell:
             if pygame.K_1 <= event.key <= pygame.K_9:
                 num = event.key - pygame.K_0
                 row, col = selected_cell
-                sudoku_grid[row][col] = num
-                selected_cell = None
+                if ctl_num_row(row, num) and ctl_num_col(col, num) and ctl_num_box(selected_cell, num):
+                    sudoku_grid[row][col] = num
+                    selected_cell = None
+                else:
+                    message = "Invalid Move!"
+                    message_time = pygame.time.get_ticks()
         
     if game_state == "tips":
         game_state = "menu"
 
     return game_state
+
+def ctl_num_row(row, num):
+    global sudoku_grid
+    size = len(sudoku_grid[row])
+    for col in range(size):
+        if sudoku_grid[row][col] == num:
+            return False
+        
+    return True
+
+def ctl_num_col(col, num):
+    global sudoku_grid
+    size = len(sudoku_grid)
+    for row in range(size):
+        if sudoku_grid[row][col] == num:
+            return False
+        
+    return True
+
+def ctl_num_box(selected_cell, num):
+    global sudoku_grid
+    grid_size = 3 
+    sel_row, sel_col = selected_cell
+    box_row = int(sel_row / grid_size) * grid_size
+    box_col = int(sel_col / grid_size) * grid_size
+    for i in range(grid_size):
+        for j in range(grid_size):
+            if sudoku_grid[box_row+i][box_col+j] == num:
+                return False
+            
+    return True
+    # print(f"row: {sel_row}, col: {sel_col}, the grid top_left corner is row: {row}, col: {col}")
+    
 
 def draw_sudoku_grid(screen):
     for i in range(10):
@@ -128,6 +169,17 @@ def highlight_selected_cell(screen, selected_cell, padding_x, padding_y, length_
             (padding_x + col * length_box, padding_y + row * length_box, length_box, length_box),
             3
         )
+def show_message(screen, text, font, color, position):
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect(center=position)
+    screen.blit(text_surface, text_rect)
+
+def show_message_timed(screen, font):
+    global message, message_time
+    if message:
+        show_message(screen, message, font, RED, (WIDTH / 2, 50))
+        if pygame.time.get_ticks() - message_time > 2000:
+            message = None
 
 
 def main():
@@ -137,11 +189,13 @@ def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
     button_width, button_height = 200, 60
+
     menu_buttons = {
         "Sudoku": pygame.Rect((WIDTH/2)-(button_width/2), 150, button_width, button_height),
         "Highscore": pygame.Rect((WIDTH/2)-(button_width/2), 250, button_width, button_height),
         "Quit": pygame.Rect((WIDTH/2)-(button_width/2), 350, button_width, button_height)
     }
+
     sudoku_buttons = {
         "Tips": pygame.Rect(100, (HEIGHT-(button_height*2)), button_width, button_height),
         "Menu": pygame.Rect(600, (HEIGHT-(button_height*2)), button_width, button_height)
@@ -177,7 +231,8 @@ def main():
             draw_numbers(screen, font, sudoku_grid)
             draw_buttons(screen, font, sudoku_buttons, mouse_pos)
             highlight_selected_cell(screen, selected_cell, 225, 150, 50)
-            
+            show_message_timed(screen, font)
+
             game_state = event_handle(game_state, sudoku_buttons)
 
         elif game_state == "quit":
